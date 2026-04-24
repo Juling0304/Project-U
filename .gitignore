@@ -1,3 +1,15 @@
+# Claude Code — local session settings (personal, not project-level)
+.claude/settings.local.json
+
+# Node.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# Data volumes
+data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -205,3 +217,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+.env.local
+.env.*.local
+.review-artifacts/
+.harness/ouroboros/session.db
