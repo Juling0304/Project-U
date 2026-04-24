@@ -1,0 +1,317 @@
+# Seed Specification v1
+# Generated: 2026-04-24
+# Source Interview: .harness/ouroboros/interviews/2026-04-24-00-00.yaml
+# WARNING: This file is immutable. To change, create a new version (seed-v2.yaml).
+
+version: 1
+created: "2026-04-24T00:00:00"
+interview_ref: "2026-04-24-00-00.yaml"
+
+goal:
+  summary: "FastAPI + Next.js + LangGraph 포트폴리오 프로젝트의 docker-compose 기반 인프라 스켈레톤을 구성하여 make up 한 번으로 전체 스택이 기동되는 실행 가능한 기반 환경을 만든다."
+  detail: >
+    한국 공공데이터 포털 OpenAPI를 활용할 포트폴리오 미니프로젝트의 개발 환경 기반이 되는 스켈레톤이다.
+    FastAPI(/health 응답), Next.js(hello world 페이지), PostgreSQL 세 컨테이너가
+    Makefile로 제어되는 docker-compose 환경에서 정상 기동된다.
+    실제 공공데이터 연동 기능과 LangGraph 에이전트 구현은 별도 시드(v2+)에서 다룬다.
+  non_goals:
+    - "한국 공공데이터 포털 OpenAPI 연동 기능 구현"
+    - "LangGraph 에이전트/그래프 실제 구현"
+    - "Redis, Celery 포함"
+    - "prod / dev 환경 분리 (별도 compose 파일)"
+    - "인증·권한 시스템"
+    - "nginx reverse proxy"
+    - "CI/CD 파이프라인"
+
+constraints:
+  must:
+    - "Python 3.13 + uv 패키지 매니저 사용 (app)"
+    - "app Dockerfile: multi-stage build (builder → runtime) + non-root 유저 실행"
+    - "Next.js 15 App Router + output: standalone 모드 사용 (ui)"
+    - "ui Dockerfile: multi-stage build (node builder → slim runtime) + non-root 유저 실행"
+    - "단일 docker-compose.yml 파일로 전체 스택 관리"
+    - "Makefile로 docker-compose 명령 래핑 (up, down, build, logs, ps 최소 포함)"
+    - "컨테이너 이름 prefix: pu- (pu-app, pu-ui, pu-postgresql)"
+    - "모노레포: app/, ui/ 폴더를 repo 루트에 배치"
+    - "Docker bridge network로 컨테이너 간 통신 (컨테이너 이름으로 호출)"
+    - "langgraph를 app의 pyproject.toml dependency에 포함"
+    - "PostgreSQL 17 Alpine 이미지 사용"
+    - ".env.sample 제공 (모든 필수 환경변수 포함)"
+    - "make up 실행 시 pu-app, pu-ui, pu-postgresql 3개 컨테이너 모두 기동"
+  must_not:
+    - "root 유저로 컨테이너 실행"
+    - "코드 또는 Dockerfile에 시크릿(비밀번호, API 키) 하드코딩"
+    - ".env 파일을 git에 커밋"
+    - "Redis, Celery 서비스를 이번 스켈레톤에 포함"
+    - "prod/dev 분리 compose 파일 생성"
+    - "nginx를 별도 서비스로 추가"
+    - "Presentation 레이어에서 Data 레이어 직접 접근 (레이어 스킵)"
+  should:
+    - "각 서비스에 healthcheck 설정"
+    - "docker-compose.yml에 YAML anchor로 공통 설정 재사용"
+    - ".gitignore에 .env, __pycache__, .next, node_modules 포함"
+    - "app pyproject.toml에 fastapi, uvicorn, langgraph, asyncpg, sqlalchemy 포함"
+    - "make shell-app, make shell-ui 타겟으로 컨테이너 접속 편의 제공"
+    - "Makefile에 .env 자동 로드 (참고 프로젝트 패턴 유지)"
+
+acceptance_criteria:
+  - id: "AC-001"
+    description: "make up 실행 시 pu-app, pu-ui, pu-postgresql 3개 컨테이너가 모두 기동되어 make ps로 확인 가능"
+    verification: "manual"
+    priority: "must"
+    complexity: "medium"
+
+  - id: "AC-002"
+    description: "GET http://localhost:{APP_PORT}/health → HTTP 200, body {\"status\": \"ok\"} 응답"
+    verification: "automated"
+    priority: "must"
+    complexity: "low"
+
+  - id: "AC-003"
+    description: "브라우저에서 http://localhost:{UI_PORT} 접속 시 Next.js hello world 페이지 렌더링"
+    verification: "manual"
+    priority: "must"
+    complexity: "low"
+
+  - id: "AC-004"
+    description: "app/Dockerfile이 builder stage(uv + 의존성 설치) → runtime stage(non-root 실행) 2단계 multi-stage 구조"
+    verification: "manual"
+    priority: "must"
+    complexity: "low"
+
+  - id: "AC-005"
+    description: "ui/Dockerfile이 node builder stage(next build) → slim runtime stage(standalone 서버, non-root 실행) 2단계 multi-stage 구조"
+    verification: "manual"
+    priority: "must"
+    complexity: "low"
+
+  - id: "AC-006"
+    description: "Makefile에 up, down, build, logs, ps, shell-app, shell-ui 타겟이 존재하고 정상 동작"
+    verification: "manual"
+    priority: "must"
+    complexity: "low"
+
+  - id: "AC-007"
+    description: ".env.sample에 DB_USER, DB_PASS, DB_NAME, APP_PORT, UI_PORT, POSTGRES_PORT 등 모든 필수 환경변수가 예시값과 주석과 함께 정의"
+    verification: "manual"
+    priority: "must"
+    complexity: "low"
+
+  - id: "AC-008"
+    description: "pu-app 컨테이너 내부에서 python -c 'import langgraph' 실행 시 에러 없이 성공"
+    verification: "manual"
+    priority: "must"
+    complexity: "low"
+
+  - id: "AC-009"
+    description: "pu-app 컨테이너가 pu-postgresql 서비스 이름으로 TCP 연결 가능 (네트워크 통신 검증)"
+    verification: "manual"
+    priority: "should"
+    complexity: "low"
+
+ontology:
+  entities:
+    - name: "AppService"
+      description: "FastAPI 백엔드 컨테이너"
+      fields:
+        - name: "containerName"
+          type: "string"
+          required: true
+        - name: "port"
+          type: "number"
+          required: true
+        - name: "image"
+          type: "string"
+          required: true
+        - name: "user"
+          type: "string"
+          required: true
+      relationships:
+        - target: "DatabaseService"
+          type: "depends_on"
+        - target: "DockerNetwork"
+          type: "belongs_to"
+
+    - name: "UiService"
+      description: "Next.js 프론트엔드 컨테이너 (standalone 서버)"
+      fields:
+        - name: "containerName"
+          type: "string"
+          required: true
+        - name: "port"
+          type: "number"
+          required: true
+        - name: "image"
+          type: "string"
+          required: true
+        - name: "user"
+          type: "string"
+          required: true
+      relationships:
+        - target: "AppService"
+          type: "calls_api"
+        - target: "DockerNetwork"
+          type: "belongs_to"
+
+    - name: "DatabaseService"
+      description: "PostgreSQL 17 Alpine 컨테이너"
+      fields:
+        - name: "containerName"
+          type: "string"
+          required: true
+        - name: "port"
+          type: "number"
+          required: true
+        - name: "dbUser"
+          type: "string"
+          required: true
+        - name: "dbPassword"
+          type: "string"
+          required: true
+        - name: "dbName"
+          type: "string"
+          required: true
+      relationships:
+        - target: "DockerNetwork"
+          type: "belongs_to"
+
+    - name: "DockerNetwork"
+      description: "컨테이너 간 통신을 위한 bridge 네트워크"
+      fields:
+        - name: "name"
+          type: "string"
+          required: true
+        - name: "driver"
+          type: "string"
+          required: true
+
+  actions:
+    - name: "startStack"
+      actor: "developer"
+      input: "make up"
+      output: "3개 컨테이너 기동 (pu-app, pu-ui, pu-postgresql)"
+      side_effects:
+        - "Docker 이미지 빌드 (없을 경우)"
+        - "컨테이너 네트워크 생성"
+
+    - name: "buildImages"
+      actor: "developer"
+      input: "make build"
+      output: "pu-app 이미지, pu-ui 이미지"
+      side_effects:
+        - "multi-stage Docker 빌드 실행"
+        - "uv로 Python 의존성 설치 (builder stage)"
+        - "next build로 standalone 번들 생성 (builder stage)"
+
+    - name: "healthCheck"
+      actor: "docker-engine / developer"
+      input: "GET /health"
+      output: "HTTP 200 {\"status\": \"ok\"}"
+      side_effects: []
+
+    - name: "stopStack"
+      actor: "developer"
+      input: "make down"
+      output: "모든 컨테이너 중지 및 제거"
+      side_effects:
+        - "네트워크 제거"
+
+architecture:
+  pattern: "3-tier-layered"
+  layers:
+    presentation:
+      description: "Next.js App Router (ui/) — 페이지 렌더링, FastAPI API 호출 프록시"
+      directories:
+        - "ui/src/app"
+        - "ui/src/components"
+      responsibilities:
+        - "HTTP 페이지 렌더링"
+        - "사용자 입력 수집 및 표시"
+        - "FastAPI 백엔드로 API 요청 프록시"
+      cannot_access:
+        - "database"
+        - "langgraph_directly"
+    logic:
+      description: "FastAPI routers + service layer (app/) — API 엔드포인트, LangGraph 진입점"
+      directories:
+        - "app/routers"
+        - "app/services"
+        - "app/schemas"
+      responsibilities:
+        - "HTTP 요청 수신 및 응답 포맷팅"
+        - "비즈니스 로직 (서비스 레이어)"
+        - "LangGraph 에이전트 호출 (향후)"
+        - "입력 검증 (Pydantic)"
+      cannot_access:
+        - "ui_code"
+    data:
+      description: "SQLAlchemy models + repository layer (app/database, app/repositories)"
+      directories:
+        - "app/database"
+        - "app/models"
+        - "app/repositories"
+      responsibilities:
+        - "PostgreSQL 연결 및 쿼리"
+        - "ORM 모델 정의"
+        - "외부 API 호출 (향후: 공공데이터 포털)"
+      cannot_access:
+        - "routers"
+        - "ui_code"
+  layer_communication:
+    presentation_to_logic: "HTTP REST API (Docker bridge network)"
+    logic_to_data: "repository pattern (SQLAlchemy async session)"
+    data_format: "Pydantic schemas (DTO)"
+
+scope:
+  mvp:
+    - "docker-compose.yml (pu-app, pu-ui, pu-postgresql 서비스 정의)"
+    - "Makefile (up, down, build, logs, ps, shell-app, shell-ui)"
+    - "app/Dockerfile (Python 3.13, uv, multi-stage, non-root)"
+    - "app/pyproject.toml (fastapi, uvicorn, langgraph, asyncpg, sqlalchemy)"
+    - "app/main.py (FastAPI 앱, /health 엔드포인트)"
+    - "ui/Dockerfile (Node 22, Next.js standalone, multi-stage, non-root)"
+    - "ui/package.json + next.config.ts (output: standalone)"
+    - "ui/src/app/page.tsx (hello world 페이지)"
+    - ".env.sample (모든 필수 환경변수)"
+    - ".gitignore (.env, __pycache__, .next, node_modules)"
+  future:
+    - "한국 공공데이터 포털 OpenAPI 클라이언트 (seed-v2)"
+    - "LangGraph 에이전트/그래프 구현 (seed-v2)"
+    - "Redis + Celery worker/flower 추가 (seed-v3)"
+    - "실제 비즈니스 로직 및 DB 스키마 (seed-v2+)"
+    - "CI/CD 파이프라인"
+    - "인증/권한 시스템"
+
+tech_decisions:
+  - decision: "uv를 Python 패키지 매니저로 사용"
+    reason: "2024~2025년 가장 빠른 성장세의 modern Python 패키지 매니저. pip/poetry 대비 10~100x 빠른 설치 속도. Rust 기반으로 lockfile 지원."
+    alternatives_considered:
+      - "pip + requirements.txt (구식, lockfile 미지원)"
+      - "poetry (무겁고 느림, Docker multi-stage에서 복잡)"
+
+  - decision: "Next.js standalone output 모드 사용"
+    reason: "nginx 없이 Next.js 자체 서버(server.js)가 서빙. 컨테이너 구조 단순화. 향후 SSR/API Routes 활용 가능."
+    alternatives_considered:
+      - "next export + nginx (정적 파일만 서빙, SSR 불가 — 미래 기능 제한)"
+      - "nginx + static export (nginx 별도 서비스 필요, 복잡도 증가)"
+
+  - decision: "multi-stage Dockerfile (builder → runtime)"
+    reason: "빌드 도구(uv, node, npm)를 최종 이미지에서 제외하여 이미지 크기 감소 및 보안 공격 면적 최소화."
+    alternatives_considered:
+      - "단일 stage Dockerfile (간단하지만 이미지 크기 크고 보안 취약)"
+
+  - decision: "non-root 유저로 컨테이너 실행"
+    reason: "컨테이너 탈출 공격 시 호스트 피해 최소화. 포트폴리오에서 운영 수준 보안 베스트 프랙티스 어필."
+    alternatives_considered:
+      - "root 실행 (간단하지만 보안 취약, 포트폴리오 마이너스)"
+
+  - decision: "단일 docker-compose.yml (prod/dev 분리 없음)"
+    reason: "포트폴리오 목적으로 단순성 우선. prod/dev 분리는 실제 서비스 운영 시 필요하나 이 프로젝트 범위 외."
+    alternatives_considered:
+      - "docker-compose.yml + docker-compose.override.yml (불필요한 복잡도)"
+
+  - decision: "PostgreSQL 17 Alpine 이미지"
+    reason: "최신 안정 버전. Alpine 기반으로 이미지 크기 최소화."
+    alternatives_considered:
+      - "PostgreSQL 16 (이전 버전, 기능 제한)"
+      - "PostgreSQL 17 Debian (이미지 크기 더 큼)"

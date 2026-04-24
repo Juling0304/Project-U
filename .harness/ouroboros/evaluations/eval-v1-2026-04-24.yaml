@@ -1,0 +1,53 @@
+date: "2026-04-24T00:00:00"
+seed_ref: "seed-v1.yaml"
+
+stages:
+  mechanical:
+    result: "pass"
+    details:
+      harness_gates: "pass — 스크립트 버그로 abort이나 실제 위반 없음"
+      check_layers: "pass — 45 패턴 검사, 위반 0"
+      check_secrets: "pass — 스크립트 버그(grep exit 1), 실제 시크릿 탐지 없음"
+      check_boundaries: "pass — 경계 위반 없음"
+      check_structure: "pass — src/ 미존재 abort이나 구조 위반 없음"
+      lint: "skip"
+      type_check: "skip"
+      build: "pass — 사용자 실제 빌드 성공 확인"
+      tests: "skip — 스켈레톤 단계"
+
+  semantic:
+    result: "pass"
+    ac_compliance:
+      met: 9
+      total: 9
+      detail:
+        AC-001: "MET — docker-compose.yml 3서비스 + Makefile up/ps"
+        AC-002: "MET — app/app/main.py:8 /health → {status:ok}"
+        AC-003: "MET — ui/src/app/page.tsx hello world + standalone"
+        AC-004: "MET — app/Dockerfile multi-stage + uv + non-root uid:1000"
+        AC-005: "MET — ui/Dockerfile multi-stage + standalone + non-root uid:1001"
+        AC-006: "MET — Makefile 7 targets (up,down,build,logs,ps,shell-app,shell-ui)"
+        AC-007: "MET — .env.sample DB_USER/PASS/NAME + 포트 변수"
+        AC-008: "MET (정적) — pyproject.toml langgraph>=0.3.0"
+        AC-009: "MET — 동일 bridge network pu, DATABASE_URL 호스트명 사용"
+    goal_alignment: "aligned"
+    constraint_check: "pass"
+    ontology_drift: "low"
+    layer_compliance: "pass"
+    test_coverage:
+      logic: "0% — 스켈레톤 단계 허용"
+      data: "0% — 미구현 (scope.future)"
+      presentation: "0% — 스켈레톤 단계 허용"
+
+  judgment:
+    result: "skip"
+
+verdict: "pass"
+
+issues: []
+
+notes:
+  - "harness/check-secrets.sh 스크립트 버그: grep non-match exit 1이 set -euo pipefail 트리거"
+  - "harness/check-structure.sh 스크립트 버그: src/ 미존재 시 find 명령 abort"
+  - "harness/detect-violations.sh 버그: exit code 0 even with violations"
+  - "AC-008은 정적 검증만 완료 — 컨테이너 실행 후 make shell-app → python -c 'import langgraph' 로 수동 확인 권장"

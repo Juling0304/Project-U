@@ -1,0 +1,87 @@
+date: "2026-04-24T00:00:00"
+topic: "Project-U 인프라 스켈레톤 — FastAPI + Next.js + LangGraph + docker-compose"
+ambiguity_score: 0.074
+
+dimensions:
+  goal_clarity: 0.95
+  constraint_clarity: 0.92
+  success_criteria: 0.90
+
+answers:
+  - question: "무엇을 만들고 싶으신가요?"
+    answer: "FastAPI(백엔드) + Next.js(프론트엔드) + LangGraph(핵심 기술)를 사용하는 포트폴리오 미니프로젝트. 한국 공공데이터 포털 OpenAPI 활용 예정. 구체적인 기능은 미정이므로 이번 세션은 인프라 스켈레톤만 구성."
+    dimension: "goal"
+    clarity_delta: +0.65
+
+  - question: "기술 스택 제약이 있나요?"
+    answer: "FastAPI, Next.js, LangGraph 고정. docker-compose + Makefile로 컨트롤. 참고: /data/jtao/compose 구조. prod/dev 분리 불필요(포트폴리오)."
+    dimension: "constraints"
+    clarity_delta: +0.50
+
+  - question: "스켈레톤 단계에서 PostgreSQL/Redis/Celery를 모두 포함할까요?"
+    answer: "PostgreSQL만 포함. Redis/Celery는 나중에 기능 정할 때 추가."
+    dimension: "constraints"
+    clarity_delta: +0.15
+
+  - question: "프로젝트 디렉토리 구조는 어떻게 가져갈 건가요?"
+    answer: "단일 repo 모노레포. 루트에 app/, ui/, docker-compose.yml, Makefile, .env 배치."
+    dimension: "constraints"
+    clarity_delta: +0.12
+
+  - question: "모던한 Dockerfile의 기준은?"
+    answer: "Python(FastAPI): uv + multi-stage build + non-root 유저. Next.js: standalone output + multi-stage + non-root 유저."
+    dimension: "constraints"
+    clarity_delta: +0.15
+
+  - question: "Next.js에서 FastAPI를 어떻게 연결할 건가요?"
+    answer: "Docker bridge network로 컨테이너 이름으로 호출. Next.js standalone 서버가 직접 서빙(nginx 없음)."
+    dimension: "constraints"
+    clarity_delta: +0.10
+
+  - question: "LangGraph는 스켈레톤에서 어떤 형태로 존재할까요?"
+    answer: "app 컨테이너 안에 dependency로만 설치된 상태(placeholder)."
+    dimension: "goal"
+    clarity_delta: +0.10
+
+  - question: "스켈레톤의 완료 기준이 뭔가요?"
+    answer: "make up 치면 컨테이너가 실제로 뜨는 수준. app에 /health 엔드포인트, ui에 hello world 페이지 포함."
+    dimension: "success_criteria"
+    clarity_delta: +0.45
+
+  - question: "컨테이너/프로젝트 이름 prefix는?"
+    answer: "pu- (예: pu-app, pu-ui, pu-postgresql)"
+    dimension: "constraints"
+    clarity_delta: +0.10
+
+decisions:
+  - "모노레포: app/, ui/ 폴더를 repo 루트에 배치"
+  - "인프라: PostgreSQL만 스켈레톤에 포함 (Redis/Celery 제외)"
+  - "Dockerfile: multi-stage + non-root (Python: uv, Next.js: standalone)"
+  - "UI 서빙: Next.js standalone 직접 서빙, nginx 없음"
+  - "LangGraph: app 컨테이너 dependency로만 설치"
+  - "컨테이너 prefix: pu-"
+  - "Makefile 스타일: /data/jtao/compose 참고, prod/dev 구분 없이 단순화"
+  - "성공 기준: make up으로 모든 컨테이너 정상 기동 + /health + hello world"
+
+assumptions_surfaced:
+  - "기능(공공데이터 연동)은 이번 스펙 범위 밖 — 나중에 별도 인터뷰/시드"
+  - "multi-stage build는 로컬 .venv를 복사하는 방식이 아님 — Docker 내부에서 빌드"
+  - "Next.js는 export 모드가 아닌 standalone 서버 모드 사용"
+  - "포트폴리오 목적이므로 non-root는 보안 베스트 프랙티스 어필용"
+
+stack:
+  backend: "FastAPI (Python 3.13, uv)"
+  frontend: "Next.js 15 (App Router, standalone)"
+  ai: "LangGraph (dependency)"
+  database: "PostgreSQL 17 (Alpine)"
+  infra: "docker-compose + Makefile"
+  container_prefix: "pu"
+
+directory_layout:
+  - "Project-U/"
+  - "├── app/              # FastAPI 소스"
+  - "├── ui/               # Next.js 소스"
+  - "├── docker-compose.yml"
+  - "├── Makefile"
+  - "├── .env.sample"
+  - "└── .env              # gitignore"
