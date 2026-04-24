@@ -1,0 +1,94 @@
+# ================================================================
+# YAML Anchor 정의 — 서비스에서 <<: *anchor 로 재사용
+# ================================================================
+
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# ================================================================
+# Services
+# ================================================================
+
+services:
+
+  # ── 인프라 ──────────────────────────────────────────────────
+
+  pu-postgresql:
+    container_name: pu-postgresql
+    image: postgres:17.9-alpine
+    environment:
+      TZ: ${TIMEZONE:-Asia/Seoul}
+      POSTGRES_USER: ${DB_USER:-puuser}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME:-pudb}
+      LANG: C.UTF-8
+    volumes:
+      - ${DATA_DIR:-./data}/postgresql:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-puuser} -d ${DB_NAME:-pudb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *logging
+
+  # ── 애플리케이션 ─────────────────────────────────────────────
+
+  pu-app:
+    container_name: pu-app
+    image: ${APP_IMAGE:-pu-app}:${APP_TAG:-latest}
+    build:
+      context: ./pu-app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      TZ: ${TIMEZONE:-Asia/Seoul}
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-puuser}:${DB_PASS}@pu-postgresql:5432/${DB_NAME:-pudb}
+    ports:
+      - "${APP_PORT:-58000}:8000"
+    depends_on:
+      pu-postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging: *logging
+
+  # ── UI ──────────────────────────────────────────────────────
+
+  pu-ui:
+    container_name: pu-ui
+    image: ${UI_IMAGE:-pu-ui}:${UI_TAG:-latest}
+    build:
+      context: ./pu-ui
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      TZ: ${TIMEZONE:-Asia/Seoul}
+    ports:
+      - "${UI_PORT:-53000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging: *logging
+
+# ================================================================
+# Network
+# ================================================================
+
+networks:
+  default:
+    name: ${COMPOSE_PROJECT_NAME:-pu}
+    driver: bridge
